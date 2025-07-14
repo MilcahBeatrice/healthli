@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "609070628140",
+    "project_id": "healthli-dc360",
+    "storage_bucket": "healthli-dc360.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:609070628140:android:78f29b0a0cc5ea66318089",
+        "android_client_info": {
+          "package_name": "com.example.healthli"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDioTMLSIOwEe4kLE2FcEghD3P89Wo9cto"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
