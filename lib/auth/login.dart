@@ -1,15 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:healthli/auth/signup.dart';
 import 'package:healthli/home/home_screen.dart';
+import 'package:healthli/services/auth_service.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _login() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(authServiceProvider)
+          .signIn(
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+          );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeScreen()),
+      );
+    } on Exception catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -28,6 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Email', style: textTheme.bodyLarge?.copyWith()),
               SizedBox(height: 10),
               TextFormField(
+                controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
@@ -39,6 +74,8 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Password', style: textTheme.bodyLarge?.copyWith()),
               SizedBox(height: 10),
               TextFormField(
+                controller: _passwordController,
+                obscureText: true,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -55,13 +92,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(_error!, style: TextStyle(color: Colors.red)),
+                ),
               InkWell(
-                onTap:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => HomeScreen()),
-                    ),
+                onTap: _loading ? null : _login,
                 child: Container(
                   margin: EdgeInsets.symmetric(vertical: 30),
                   height: 56,
@@ -71,18 +108,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Color(0xFF008B56),
                   ),
                   child: Center(
-                    child: Text(
-                      'Log In',
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    ),
+                    child:
+                        _loading
+                            ? CircularProgressIndicator(color: Colors.white)
+                            : Text(
+                              'Log In',
+                              style: textTheme.bodyLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
                   ),
                 ),
               ),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -90,7 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     "Don't have an account?",
                     style: textTheme.bodyLarge?.copyWith(),
                   ),
-
                   SizedBox(width: 10),
                   InkWell(
                     onTap: () {

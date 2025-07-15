@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:healthli/auth/login.dart';
 import 'package:healthli/home/home_screen.dart';
 import 'package:healthli/onboarding/onboarding_screen.dart';
@@ -18,7 +19,7 @@ void main() {
         ),
       )
       .then((value) {
-        runApp(const MyApp());
+        runApp(ProviderScope(child: const MyApp()));
         log("Firebase initialized");
       })
       .catchError((error) {
@@ -36,7 +37,7 @@ class MyApp extends StatelessWidget {
       title: 'Healthli',
       theme: ThemeData(),
       debugShowCheckedModeBanner: false,
-      home: ProfileScreen(),
+      home: LoginScreen(),
     );
   }
 }
