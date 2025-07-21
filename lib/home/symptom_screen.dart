@@ -81,15 +81,15 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      bottomNavigationBar: HealthBottomNavBar(
-        currentIndex: 0,
-        onTap: (index) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => HomeScreen()),
-          );
-        },
-      ),
+      // bottomNavigationBar: HealthBottomNavBar(
+      //   currentIndex: 0,
+      //   onTap: (index) {
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(builder: (_) => HomeScreen()),
+      //     );
+      //   },
+      // ),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,

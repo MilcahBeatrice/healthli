@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:healthli/auth/login.dart';
+import 'package:healthli/database/db_helper.dart';
 import 'package:healthli/home/home_screen.dart';
 import 'package:healthli/services/auth_service.dart';
+import 'package:healthli/widgets/user_nav_gate.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -16,6 +19,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _genderController = TextEditingController();
+  final _ageController = TextEditingController();
   bool _loading = false;
   String? _error;
 
@@ -32,15 +37,28 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       return;
     }
     try {
-      await ref
-          .read(authServiceProvider)
-          .signUp(
-            _emailController.text.trim(),
-            _passwordController.text.trim(),
-          );
+      final auth = ref.read(authServiceProvider);
+      await auth.signUp(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+      // Save user details to local DB
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final db = await DatabaseHelper().database;
+        await db.insert('users_local', {
+          'id': user.uid,
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'age': int.tryParse(_ageController.text.trim()),
+          'gender': _genderController.text.trim(),
+          'profile_image': null,
+          'is_synced': 0,
+        });
+      }
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
+        MaterialPageRoute(builder: (_) => const UserNavGate()),
       );
     } on Exception catch (e) {
       setState(() {
@@ -73,6 +91,29 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               SizedBox(height: 10),
               TextFormField(
                 controller: _nameController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              SizedBox(height: 10),
+              Text('Gender', style: textTheme.bodyLarge?.copyWith()),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: _genderController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              SizedBox(height: 10),
+              Text('Age', style: textTheme.bodyLarge?.copyWith()),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: _ageController,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),

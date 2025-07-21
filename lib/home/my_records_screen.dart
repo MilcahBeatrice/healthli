@@ -1,182 +1,126 @@
 import 'package:flutter/material.dart';
-import 'package:healthli/home/home_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../database/models/record_model.dart';
+import '../database/dao/dao_providers.dart';
+import '../services/sync_service.dart';
+import 'package:uuid/uuid.dart';
 import 'package:healthli/widgets/bottom_navbar.dart';
 
-class MyRecordsScreen extends StatefulWidget {
-  const MyRecordsScreen({super.key});
+class MyRecordsScreen extends ConsumerStatefulWidget {
+  final String userId;
+  const MyRecordsScreen({required this.userId, super.key});
 
   @override
-  State<MyRecordsScreen> createState() => _MyRecordsScreenState();
+  ConsumerState<MyRecordsScreen> createState() => _MyRecordsScreenState();
 }
 
-class _MyRecordsScreenState extends State<MyRecordsScreen> {
-  final List<RecordItem> _records = []; // Add dummy/mock data here if needed
+class _MyRecordsScreenState extends ConsumerState<MyRecordsScreen> {
+  late Future<List<Record>> _recordsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecords();
+  }
+
+  void _loadRecords() {
+    _recordsFuture = ref.read(recordDaoProvider).getAllRecords(widget.userId);
+  }
+
+  void _addRecord() async {
+    final titleController = TextEditingController();
+    final valueController = TextEditingController();
+    final unitController = TextEditingController();
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Add Record'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(labelText: 'Title'),
+                ),
+                TextField(
+                  controller: valueController,
+                  decoration: InputDecoration(labelText: 'Value'),
+                ),
+                TextField(
+                  controller: unitController,
+                  decoration: InputDecoration(labelText: 'Unit'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final record = Record(
+                    id: Uuid().v4(),
+                    userId: widget.userId,
+                    title: titleController.text,
+                    value: valueController.text,
+                    unit: unitController.text,
+                    timestamp: DateTime.now().toIso8601String(),
+                    isSynced: 0,
+                  );
+                  await ref.read(recordDaoProvider).insertRecord(record);
+                  await SyncService.insertRecord(record.toMap(), widget.userId);
+                  Navigator.pop(context);
+                  setState(_loadRecords);
+                },
+                child: Text('Save'),
+              ),
+            ],
+          ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      bottomNavigationBar: HealthBottomNavBar(
-        currentIndex: 0,
-        onTap: (index) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
-        },
-      ),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF00A86B)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'My Records',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.upload_file_rounded,
-              color: Color(0xFF00A86B),
-            ),
-            tooltip: 'Upload Record',
-            onPressed: () {
-              // Implement upload action
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Upload feature coming soon'),
-                  backgroundColor: Color(0xFF00A86B),
+      appBar: AppBar(title: Text('My Records')),
+      body: FutureBuilder<List<Record>>(
+        future: _recordsFuture,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData)
+            return Center(child: CircularProgressIndicator());
+          final records = snapshot.data!;
+          if (records.isEmpty) return Center(child: Text('No records yet.'));
+          return ListView.builder(
+            itemCount: records.length,
+            itemBuilder: (context, i) {
+              final r = records[i];
+              return ListTile(
+                title: Text('${r.title}: ${r.value} ${r.unit}'),
+                subtitle: Text(r.timestamp),
+                trailing: IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () async {
+                    await ref.read(recordDaoProvider).deleteRecord(r.id);
+                    setState(_loadRecords);
+                  },
                 ),
               );
             },
-          ),
-        ],
+          );
+        },
       ),
-      body: _records.isEmpty ? _buildEmptyState() : _buildRecordList(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addRecord,
+        child: Icon(Icons.add),
+      ),
+      // bottomNavigationBar: HealthBottomNavBar(
+      //   currentIndex: 0,
+      //   onTap: (index) {
+      //     // Handle navigation
+      //   },
+      // ),
     );
   }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 30),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.folder_open_rounded, size: 90, color: Colors.grey[400]),
-            const SizedBox(height: 20),
-            const Text(
-              'No Medical Records Yet',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'You can upload prescriptions, test results, and visit summaries here to keep everything organized.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            ),
-            const SizedBox(height: 25),
-            ElevatedButton.icon(
-              onPressed: () {
-                // Handle upload
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00A86B),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
-              label: const Text(
-                'Add Record',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecordList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: _records.length,
-      itemBuilder: (context, index) {
-        final record = _records[index];
-        return _buildRecordCard(record);
-      },
-    );
-  }
-
-  Widget _buildRecordCard(RecordItem record) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.green[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF00A86B), width: 1),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.description_rounded, size: 32, color: Colors.green[800]),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  record.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  record.date,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  record.description ?? 'No description provided.',
-                  style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Model class for medical records
-class RecordItem {
-  final String title;
-  final String date;
-  final String? description;
-
-  RecordItem({required this.title, required this.date, this.description});
 }

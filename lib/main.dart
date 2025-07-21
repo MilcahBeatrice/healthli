@@ -3,10 +3,8 @@ import 'dart:developer';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:healthli/auth/login.dart';
-import 'package:healthli/home/home_screen.dart';
-import 'package:healthli/onboarding/onboarding_screen.dart';
-import 'package:healthli/profiile/profile_screen.dart';
+import 'package:healthli/database/db_helper.dart';
+import 'package:healthli/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +16,15 @@ void main() {
           projectId: "healthli-dc360",
         ),
       )
-      .then((value) {
+      .then((value) async {
+        // Ensure local database and tables are created
+        try {
+          final dbHelper = DatabaseHelper();
+          await dbHelper.database;
+          log("Local database initialized");
+        } catch (e) {
+          log("Error initializing local database: $e");
+        }
         runApp(ProviderScope(child: const MyApp()));
         log("Firebase initialized");
       })
@@ -37,7 +43,7 @@ class MyApp extends StatelessWidget {
       title: 'Healthli',
       theme: ThemeData(),
       debugShowCheckedModeBanner: false,
-      home: LoginScreen(),
+      home: const SplashScreen(),
     );
   }
 }

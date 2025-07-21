@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:healthli/auth/signup.dart';
-import 'package:healthli/home/home_screen.dart';
 import 'package:healthli/services/auth_service.dart';
+import 'package:healthli/widgets/user_nav_gate.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -31,7 +31,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
+        MaterialPageRoute(builder: (_) => const UserNavGate()),
       );
     } on Exception catch (e) {
       setState(() {

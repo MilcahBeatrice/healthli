@@ -1,61 +1,27 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:healthli/services/auth_service.dart';
 import 'package:flutter/material.dart';
-import 'package:healthli/home/home_screen.dart';
-import 'package:healthli/widgets/bottom_navbar.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:healthli/database/models/medicine_model.dart';
+import 'package:healthli/services/sync_service.dart';
 
-class PharmacyScreen extends StatefulWidget {
+class PharmacyScreen extends ConsumerStatefulWidget {
   const PharmacyScreen({super.key});
 
   @override
-  State<PharmacyScreen> createState() => _PharmacyScreenState();
+  ConsumerState<PharmacyScreen> createState() => _PharmacyScreenState();
 }
 
-class _PharmacyScreenState extends State<PharmacyScreen> {
+class _PharmacyScreenState extends ConsumerState<PharmacyScreen> {
   final TextEditingController _searchController = TextEditingController();
-  List<DrugItem> _allDrugs = [];
-  List<DrugItem> _filteredDrugs = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeDrugs();
-    _searchController.addListener(_onSearchChanged);
-  }
 
   @override
   void dispose() {
-    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  void _initializeDrugs() {
-    // Sample drug data - replace with your actual data source
-    _allDrugs = [
-      DrugItem(name: 'Paracetamol 500mg', price: '\$12.50'),
-      DrugItem(name: 'Ibuprofen 400mg', price: '\$8.75'),
-      DrugItem(name: 'Amoxicillin 250mg', price: '\$15.20'),
-      DrugItem(name: 'Aspirin 100mg', price: '\$6.30'),
-      DrugItem(name: 'Omeprazole 20mg', price: '\$22.10'),
-    ];
-    _filteredDrugs = List.from(_allDrugs);
-  }
-
-  void _onSearchChanged() {
-    String query = _searchController.text.toLowerCase().trim();
-    setState(() {
-      if (query.isEmpty) {
-        _filteredDrugs = List.from(_allDrugs);
-      } else {
-        _filteredDrugs =
-            _allDrugs
-                .where((drug) => drug.name.toLowerCase().contains(query))
-                .toList();
-      }
-    });
-  }
-
   void _onFilterTapped() {
-    // Implement filter functionality
     showModalBottomSheet(
       context: context,
       builder:
@@ -78,25 +44,12 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final query = _searchController.text.trim();
+    final drugsAsync = ref.watch(searchDrugProvider(query));
     return Scaffold(
       backgroundColor: Colors.white,
-
-      bottomNavigationBar: HealthBottomNavBar(
-        currentIndex: 0,
-        onTap: (index) {
-          return Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) {
-                return HomeScreen();
-              },
-            ),
-          );
-        },
-      ),
       appBar: AppBar(
         backgroundColor: Colors.white,
-
         elevation: 0,
         leading: Builder(
           builder: (context) {
@@ -151,6 +104,7 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
                         contentPadding: EdgeInsets.symmetric(vertical: 15),
                       ),
                       style: const TextStyle(color: Colors.black, fontSize: 16),
+                      onSubmitted: (_) => setState(() {}),
                     ),
                   ),
                   GestureDetector(
@@ -173,26 +127,37 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
               ),
             ),
           ),
-
           // Drug List Section
           Expanded(
-            child:
-                _filteredDrugs.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _filteredDrugs.length,
-                      itemBuilder: (context, index) {
-                        return _buildDrugItem(_filteredDrugs[index], index);
-                      },
+            child: drugsAsync.when(
+              data: (drugs) {
+                if (drugs.isEmpty) {
+                  return _buildEmptyState(query);
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: drugs.length,
+                  itemBuilder: (context, index) {
+                    return _buildDrugItem(drugs[index], index);
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error:
+                  (err, stack) => Center(
+                    child: Text(
+                      'Error: $err',
+                      style: TextStyle(color: Colors.red),
                     ),
+                  ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDrugItem(DrugItem drug, int index) {
+  Widget _buildDrugItem(Medicine drug, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       child: Row(
@@ -222,42 +187,23 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  drug.price,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                // Text(
+                //   drug.id,
+                //   style: const TextStyle(
+                //     fontSize: 14,
+                //     color: Colors.grey,
+                //     fontWeight: FontWeight.w500,
+                //   ),
+                // ),
               ],
             ),
           ),
-          // Add to Cart Button (Optional)
-          // GestureDetector(
-          //   onTap: () => _onDrugTapped(drug),
-          //   child: Container(
-          //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          //     decoration: BoxDecoration(
-          //       color: const Color(0xFF008B56),
-          //       borderRadius: BorderRadius.circular(15),
-          //     ),
-          //     child: const Text(
-          //       'Add',
-          //       style: TextStyle(
-          //         color: Colors.white,
-          //         fontSize: 12,
-          //         fontWeight: FontWeight.w600,
-          //       ),
-          //     ),
-          //   ),
-          // ),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(String query) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -265,20 +211,21 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
           Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            _searchController.text.isEmpty
+            query.isEmpty
                 ? 'No medicines available'
-                : 'No medicines found for "${_searchController.text}"',
+                : 'No medicines found for "$query"',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
           ),
-          if (_searchController.text.isNotEmpty) ...[
+          if (query.isNotEmpty) ...[
             const SizedBox(height: 8),
             TextButton(
               onPressed: () {
                 _searchController.clear();
+                setState(() {});
               },
               child: const Text(
                 'Clear search',
@@ -294,11 +241,24 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
     );
   }
 
-  void _onDrugTapped(DrugItem drug) {
-    // Handle drug item tap (e.g., add to cart, show details)
+  void _onDrugTapped(Medicine drug) async {
+    // Save to Firestore drug_history for the current user
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('drug_history')
+          .doc(drug.id)
+          .set({
+            'id': drug.id,
+            'name': drug.name,
+            'timestamp': DateTime.now().toIso8601String(),
+          });
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${drug.name} added to cart'),
+        content: Text('${drug.name} saved to history'),
         backgroundColor: const Color(0xFF00A86B),
         duration: const Duration(seconds: 2),
       ),

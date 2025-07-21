@@ -1,17 +1,121 @@
 import 'dart:developer';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:healthli/auth/login.dart';
+import 'package:healthli/database/db_helper.dart';
 import 'package:healthli/home/find_doctor_screen.dart';
 import 'package:healthli/home/my_records_screen.dart';
 import 'package:healthli/home/pharmacy_screen.dart';
 import 'package:healthli/home/symptom_screen.dart';
+import 'package:healthli/services/sync_service.dart';
 import 'package:healthli/widgets/bottom_navbar.dart';
+import 'package:healthli/services/doctor_service.dart';
+import 'package:healthli/services/news_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  final String userId;
+  const HomeScreen({super.key, required this.userId});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<Map<String, dynamic>> _newsArticles = [];
+  bool _loadingNews = false;
+  String? _newsError;
+  bool _uploadingDoctors = false;
+  String? _firstName;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchLatestNews();
+    log("HomeScreen initialized for user: ${widget.userId}");
+    fetchAndSetFirstName();
+    // Trigger Firestore sync on navigation to HomeScreen
+    SyncService.syncAllPendingToFirestore(widget.userId);
+  }
+
+  void fetchLatestNews() async {
+    setState(() {
+      _loadingNews = true;
+      _newsError = null;
+    });
+    try {
+      final news = await NewsService.fetchLatestHealthNews();
+      setState(() {
+        _newsArticles = news ?? [];
+        _loadingNews = false;
+      });
+    } catch (e) {
+      setState(() {
+        _newsError = e.toString();
+        _loadingNews = false;
+      });
+    }
+  }
+
+  Future<Map<String, dynamic>?> getUserById(String userId) async {
+    final db = await DatabaseHelper().database;
+    try {
+      final List<Map<String, dynamic>> results = await db.query(
+        'users_local',
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+      if (results.isNotEmpty) {
+        return results.first;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching user: $e');
+      return null;
+    }
+  }
+
+  void _pushDoctorsToFirestore() async {
+    setState(() {
+      _uploadingDoctors = true;
+    });
+    try {
+      await DoctorService.pushDoctorsJsonToFirestore();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Doctors uploaded to Firestore!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+    } finally {
+      setState(() {
+        _uploadingDoctors = false;
+      });
+    }
+  }
+
+  void fetchAndSetFirstName() async {
+    final user = await getUserById(widget.userId);
+    if (user != null && user['name'] != null) {
+      // Extract first name (assume space-separated)
+      final name = user['name'] as String;
+      final firstName = name.split(' ').first;
+      setState(() {
+        _firstName = firstName;
+      });
+    } else {
+      setState(() {
+        _firstName = null;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    log(widget.userId);
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -48,24 +152,39 @@ class HomeScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 15),
                             // Greeting Text
-                            const Column(
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Hello Beatrice',
-                                  style: TextStyle(
+                                  _firstName != null
+                                      ? 'Hello $_firstName'
+                                      : 'Hello',
+                                  style: const TextStyle(
                                     fontSize: 26,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.black,
                                   ),
                                 ),
-                                // Text(
-                                //   'Beatrice',
-                                //   style: TextStyle(
-                                //     fontSize: 26,
-                                //     fontWeight: FontWeight.w600,
-                                //     color: Colors.black,
+                                const SizedBox(height: 8),
+                                // ElevatedButton.icon(
+                                //   icon: const Icon(
+                                //     Icons.cloud_upload,
+                                //     size: 18,
                                 //   ),
+                                //   label: Text(
+                                //     _uploadingDoctors
+                                //         ? 'Uploading...'
+                                //         : 'Push Doctors to Cloud',
+                                //   ),
+                                //   style: ElevatedButton.styleFrom(
+                                //     backgroundColor: const Color(0xFF008B56),
+                                //     foregroundColor: Colors.white,
+                                //     minimumSize: const Size(120, 36),
+                                //   ),
+                                //   onPressed:
+                                //       _uploadingDoctors
+                                //           ? null
+                                //           : _pushDoctorsToFirestore,
                                 // ),
                               ],
                             ),
@@ -140,7 +259,9 @@ class HomeScreen extends StatelessWidget {
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) {
-                                          return MyRecordsScreen();
+                                          return MyRecordsScreen(
+                                            userId: widget.userId,
+                                          );
                                         },
                                       ),
                                     ),
@@ -165,8 +286,106 @@ class HomeScreen extends StatelessWidget {
 
                           const SizedBox(height: 20),
 
-                          // Empty space for insights content
-                          Expanded(child: Container()),
+                          const SizedBox(height: 10),
+                          if (_loadingNews)
+                            const Center(child: CircularProgressIndicator())
+                          else if (_newsError != null)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                'Error: $_newsError',
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            )
+                          else if (_newsArticles.isEmpty)
+                            const Text('No news found.')
+                          else
+                            SizedBox(
+                              height: 180,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _newsArticles.length,
+                                itemBuilder: (context, index) {
+                                  final article = _newsArticles[index];
+                                  final title =
+                                      article['title'] ??
+                                      article['headline'] ??
+                                      'No title';
+                                  final description =
+                                      article['description'] ??
+                                      article['summary'] ??
+                                      '';
+                                  final url = article['url'] ?? article['link'];
+                                  return Container(
+                                    width: 260,
+                                    margin: const EdgeInsets.only(right: 16),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey.withOpacity(0.1),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          description,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey,
+                                          ),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const Spacer(),
+                                        if (url != null &&
+                                            url.toString().isNotEmpty)
+                                          Align(
+                                            alignment: Alignment.bottomRight,
+                                            child: TextButton(
+                                              onPressed: () async {
+                                                final uri = Uri.parse(url);
+                                                if (await canLaunchUrl(uri)) {
+                                                  await launchUrl(uri);
+                                                } else {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Could not open news link',
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                              child: const Text('Read More'),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -218,13 +437,13 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: HealthBottomNavBar(
-        currentIndex: 0,
-        onTap: (index) {
-          // Handle navigation here
-          log('Tapped on tab $index');
-        },
-      ),
+      // bottomNavigationBar: HealthBottomNavBar(
+      //   currentIndex: 0,
+      //   onTap: (index) {
+      //     // Handle navigation here
+      //     log('Tapped on tab $index');
+      //   },
+      // ),
     );
   }
 

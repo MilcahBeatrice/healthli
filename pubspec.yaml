@@ -37,6 +37,13 @@ dependencies:
   image_picker: ^1.1.2
   firebase_core: ^3.15.1
   firebase_auth: ^5.6.2
+  cloud_firestore: ^5.6.11
+  flutter_riverpod: ^2.6.1
+  sqflite: ^2.4.2
+  path_provider: ^2.1.5
+  shared_preferences: ^2.5.3
+  uuid: ^4.5.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +70,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
+    - assets/doctors.json
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

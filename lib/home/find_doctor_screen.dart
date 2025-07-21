@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthli/home/home_screen.dart';
 import 'package:healthli/widgets/bottom_navbar.dart';
+import 'package:healthli/services/doctor_service.dart';
 
 class FindDoctorScreen extends StatefulWidget {
   const FindDoctorScreen({super.key});
@@ -13,11 +14,12 @@ class _FindDoctorScreenState extends State<FindDoctorScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<DoctorItem> _allDoctors = [];
   List<DoctorItem> _filteredDoctors = [];
+  bool _loadingDoctors = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeDoctors();
+    fetchDoctorsFromCloud();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -29,14 +31,22 @@ class _FindDoctorScreenState extends State<FindDoctorScreen> {
   }
 
   void _initializeDoctors() {
-    _allDoctors = [
-      DoctorItem(name: 'Dr. Angela Smith', specialty: 'Cardiologist'),
-      DoctorItem(name: 'Dr. John Doe', specialty: 'Dentist'),
-      DoctorItem(name: 'Dr. Amina Bello', specialty: 'Pediatrician'),
-      DoctorItem(name: 'Dr. Kwame Boateng', specialty: 'Dermatologist'),
-      DoctorItem(name: 'Dr. Lisa Chen', specialty: 'Psychiatrist'),
-    ];
-    _filteredDoctors = List.from(_allDoctors);
+    // Deprecated: now fetching from Firestore
+    _allDoctors = [];
+    _filteredDoctors = [];
+  }
+
+  void fetchDoctorsFromCloud() async {
+    setState(() {
+      _loadingDoctors = true;
+    });
+    final doctorMaps = await DoctorService.fetchDoctorsFromFirestore();
+    final doctors = doctorMaps.map((e) => DoctorItem.fromJson(e)).toList();
+    setState(() {
+      _allDoctors = doctors;
+      _filteredDoctors = List.from(doctors);
+      _loadingDoctors = false;
+    });
   }
 
   void _onSearchChanged() {
@@ -82,15 +92,15 @@ class _FindDoctorScreenState extends State<FindDoctorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      bottomNavigationBar: HealthBottomNavBar(
-        currentIndex: 0,
-        onTap: (index) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => HomeScreen()),
-          );
-        },
-      ),
+      // bottomNavigationBar: HealthBottomNavBar(
+      //   currentIndex: 0,
+      //   onTap: (index) {
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(builder: (_) => HomeScreen()),
+      //     );
+      //   },
+      // ),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -165,7 +175,9 @@ class _FindDoctorScreenState extends State<FindDoctorScreen> {
           // Doctor List
           Expanded(
             child:
-                _filteredDoctors.isEmpty
+                _loadingDoctors
+                    ? const Center(child: CircularProgressIndicator())
+                    : _filteredDoctors.isEmpty
                     ? _buildEmptyState()
                     : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20),

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "doc031",
+    "name": "Dr. Cecilia Ofori",
+    "specialization": "Geriatrician",
+    "location": "Korle Bu Teaching Hospital, Accra",
+    "contact": "+233240112233",
+    "email": "cecilia.ofori@korlebu.gov.gh",
+    "rating": 4.7,
+    "available": true
+  },
+  {
+    "id": "doc032",
+    "name": "Dr. David Nortey",
+    "specialization": "Immunologist",
+    "location": "Komfo Anokye Teaching Hospital, Kumasi",
+    "contact": "+233208889911",
+    "email": "david.nortey@kath.org",
+    "rating": 4.5,
+    "available": false
+  },
+  {
+    "id": "doc033",
+    "name": "Dr. Alberta Dapaah",
+    "specialization": "Family Medicine",
+    "location": "Cape Coast Teaching Hospital",
+    "contact": "+233207654321",
+    "email": "alberta.dapaah@ccth.gov.gh",
+    "rating": 4.8,
+    "available": true
+  },
+  {
+    "id": "doc034",
+    "name": "Dr. Raymond Nii",
+    "specialization": "Geneticist",
+    "location": "UGMC, Accra",
+    "contact": "+233204567890",
+    "email": "raymond.nii@ugmc.org",
+    "rating": 4.6,
+    "available": true
+  },
+  {
+    "id": "doc035",
+    "name": "Dr. Felicia Nyantakyi",
+    "specialization": "Toxicologist",
+    "location": "Tamale Teaching Hospital",
+    "contact": "+233208888999",
+    "email": "felicia.nyantakyi@tth.org",
+    "rating": 4.3,
+    "available": false
+  },
+  {
+    "id": "doc036",
+    "name": "Dr. Ernestina Boadi",
+    "specialization": "Speech Therapist",
+    "location": "Ridge Hospital, Accra",
+    "contact": "+233200123456",
+    "email": "ernestina.boadi@ridgehealth.org",
+    "rating": 4.5,
+    "available": true
+  },
+  {
+    "id": "doc037",
+    "name": "Dr. Isaac Kyei",
+    "specialization": "Osteopath",
+    "location": "Sunyani Municipal Hospital",
+    "contact": "+233208334455",
+    "email": "isaac.kyei@sunyanihealth.org",
+    "rating": 4.2,
+    "available": true
+  },
+  {
+    "id": "doc038",
+    "name": "Dr. Rosemond Teye",
+    "specialization": "Chiropractor",
+    "location": "Tema General Hospital",
+    "contact": "+233207772233",
+    "email": "rosemond.teye@temahospital.org",
+    "rating": 4.7,
+    "available": true
+  },
+  {
+    "id": "doc039",
+    "name": "Dr. Prosper Annan",
+    "specialization": "Allergist",
+    "location": "Ho Teaching Hospital",
+    "contact": "+233264567123",
+    "email": "prosper.annan@hth.org",
+    "rating": 4.6,
+    "available": false
+  },
+  {
+    "id": "doc040",
+    "name": "Dr. Belinda Sarpong",
+    "specialization": "Occupational Therapist",
+    "location": "Korle Bu Rehab Centre",
+    "contact": "+233202345678",
+    "email": "belinda.sarpong@korlebu.gov.gh",
+    "rating": 4.4,
+    "available": true
+  }
+]

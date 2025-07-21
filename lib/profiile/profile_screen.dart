@@ -1,20 +1,79 @@
 import 'dart:developer';
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:healthli/auth/login.dart';
+import 'package:healthli/database/dao/dao_providers.dart';
+import 'package:healthli/database/models/user_model.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:healthli/widgets/bottom_navbar.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class ProfileScreen extends ConsumerStatefulWidget {
+  final String userId;
+  const ProfileScreen({super.key, required this.userId});
 
   @override
-  _ProfileScreenState createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool isEditing = false;
   File? _profileImage;
   final ImagePicker _picker = ImagePicker();
+
+  // Controllers for form fields
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController dobController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController genderController = TextEditingController();
+  final TextEditingController heightController = TextEditingController();
+  final TextEditingController weightController = TextEditingController();
+  final TextEditingController ageController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final userDao = ref.read(userDaoProvider);
+    final user = userDao.getUserById(widget.userId);
+    log("Loading profile for user: ${user}");
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final userDao = ref.read(userDaoProvider);
+    final user = await userDao.getUserById(widget.userId);
+    if (user != null) {
+      setState(() {
+        nameController.text = user.name;
+        emailController.text = user.email;
+        genderController.text = user.gender ?? '';
+        ageController.text = user.age?.toString() ?? '';
+        // Optionally set other fields if your user model supports them
+      });
+    }
+  }
+
+  Future<void> _saveUserData() async {
+    final userDao = ref.read(userDaoProvider);
+    final updatedUser = UserLocal(
+      id: widget.userId,
+      name: nameController.text,
+      email: emailController.text,
+      age: null, // Add age parsing if you have an age field
+      gender: genderController.text,
+      profileImage:
+          _profileImage?.path, // Save local path or upload and save URL
+      isSynced: 0,
+    );
+    await userDao.updateUser(updatedUser);
+    setState(() {
+      isEditing = false;
+    });
+    // Optionally: trigger sync to Firestore here
+  }
+
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -27,28 +86,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Controllers for form fields
-  final TextEditingController nameController = TextEditingController(
-    text: 'Name',
-  );
-  final TextEditingController dobController = TextEditingController(
-    text: 'dd/mm/yyyy',
-  );
-  final TextEditingController emailController = TextEditingController(
-    text: 'email@gmail.com',
-  );
-  final TextEditingController phoneController = TextEditingController(
-    text: '1234567890',
-  );
-  final TextEditingController genderController = TextEditingController(
-    text: 'Female',
-  );
-  final TextEditingController heightController = TextEditingController(
-    text: '166',
-  );
-  final TextEditingController weightController = TextEditingController(
-    text: '60',
-  );
+  Future<void> _logout() async {
+    // Sign out from Firebase Auth
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      log('Logout error: $e');
+      // Optionally show a snackbar or dialog
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,12 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           if (isEditing)
             TextButton(
-              onPressed: () {
-                // Save functionality
-                setState(() {
-                  isEditing = false;
-                });
-              },
+              onPressed: _saveUserData,
               child: Text(
                 'Save',
                 style: TextStyle(color: Colors.teal, fontSize: 16),
@@ -226,6 +273,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SizedBox(height: 12),
                   _buildFormField('Gender:', genderController),
                   SizedBox(height: 12),
+                  _buildFormField('Age:', ageController),
+                  SizedBox(height: 12),
                   _buildFormField('Height/cm:', heightController),
                   SizedBox(height: 12),
                   _buildFormField('Weight/Kg:', weightController),
@@ -242,6 +291,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ElevatedButton.icon(
                       onPressed: () {
                         // Log out functionality
+                        _logout();
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                          (route) => false,
+                        );
                       },
                       icon: Icon(Icons.logout, color: Colors.teal),
                       style: ElevatedButton.styleFrom(
@@ -293,13 +349,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: HealthBottomNavBar(
-        currentIndex: 2,
-        onTap: (index) {
-          // Handle navigation here
-          log('Tapped on tab $index');
-        },
-      ),
+      // bottomNavigationBar: HealthBottomNavBar(
+      //   currentIndex: 2,
+      //   onTap: (index) {
+      //     // Handle navigation here
+      //     log('Tapped on tab $index');
+      //   },
+      // ),
     );
   }
 
@@ -347,7 +403,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-
                   width: MediaQuery.sizeOf(context).width,
                   decoration: BoxDecoration(
                     color: Colors.teal.shade50,
