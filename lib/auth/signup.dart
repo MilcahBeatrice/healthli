@@ -1,8 +1,10 @@
+import 'dart:developer';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:healthli/auth/login.dart';
-import 'package:healthli/database/db_helper.dart';
+import 'package:healthli/database/dao/dao_providers.dart';
 import 'package:healthli/home/home_screen.dart';
 import 'package:healthli/services/auth_service.dart';
 import 'package:healthli/widgets/user_nav_gate.dart';
@@ -38,24 +40,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     }
     try {
       final auth = ref.read(authServiceProvider);
+      final userDao = ref.read(userDaoProvider);
       await auth.signUp(
         _emailController.text.trim(),
         _passwordController.text.trim(),
+        name: _nameController.text.trim(),
+        gender: _genderController.text.trim(),
+        age: int.tryParse(_ageController.text.trim()),
+        userDao: userDao,
       );
-      // Save user details to local DB
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final db = await DatabaseHelper().database;
-        await db.insert('users_local', {
-          'id': user.uid,
-          'name': _nameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'age': int.tryParse(_ageController.text.trim()),
-          'gender': _genderController.text.trim(),
-          'profile_image': null,
-          'is_synced': 0,
-        });
-      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const UserNavGate()),
@@ -63,6 +56,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     } on Exception catch (e) {
       setState(() {
         _error = e.toString();
+        log(_error ?? 'Unknown error');
       });
     } finally {
       setState(() {
@@ -220,6 +214,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   ),
                 ],
               ),
+              SizedBox(height: 50),
             ],
           ),
         ),

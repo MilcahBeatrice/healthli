@@ -66,6 +66,8 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         user_id TEXT,
         content TEXT,
+        comments TEXT,
+        saved_by TEXT,
         tags TEXT,
         likes INTEGER,
         is_synced INTEGER,

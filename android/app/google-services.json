@@ -12,7 +12,20 @@
           "package_name": "com.example.healthli"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "609070628140-opc3bu3bvqf1o0f7gb3g7rntb12snv9s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.healthli",
+            "certificate_hash": "53d8e28f25fbd5bc613583a51a3148e14bf98e37"
+          }
+        },
+        {
+          "client_id": "609070628140-v8l6805fp2o1at5d2psu31od0biimikb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDioTMLSIOwEe4kLE2FcEghD3P89Wo9cto"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "609070628140-v8l6805fp2o1at5d2psu31od0biimikb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -129,14 +129,68 @@ class SyncService {
           final conceptProperties = group['conceptProperties'];
           if (conceptProperties != null) {
             for (final prop in conceptProperties) {
+              final rxcui = prop['rxcui']?.toString() ?? '';
+              final name = prop['name']?.toString() ?? '';
+              final synonym = prop['synonym']?.toString();
+              final tty = prop['tty']?.toString();
+              final language = prop['language']?.toString();
+              final suppress = prop['suppress']?.toString();
+              final umlscui = prop['umlscui']?.toString();
+              final psn = prop['psn']?.toString();
+
+              String dosage = '';
+              String uses = '';
+              String sideEffects = '';
+              String? imageUrl;
+              Map<String, String> codes = {};
+
+              try {
+                final detailsResp = await http.get(
+                  Uri.parse(
+                    'https://rxnav.nlm.nih.gov/REST/rxcui/$rxcui/allProperties.json',
+                  ),
+                );
+                if (detailsResp.statusCode == 200) {
+                  final detailsData = json.decode(detailsResp.body);
+                  final properties =
+                      detailsData['propConceptGroup']?['propConcept'] ?? [];
+                  for (final propItem in properties) {
+                    final category = propItem['propCategory']?.toString() ?? '';
+                    final propName = propItem['propName']?.toString() ?? '';
+                    final value = propItem['propValue']?.toString() ?? '';
+                    if (category.toLowerCase().contains('dose') &&
+                        dosage.isEmpty)
+                      dosage = value;
+                    if (category.toLowerCase().contains('use') && uses.isEmpty)
+                      uses = value;
+                    if (category.toLowerCase().contains('side effect') &&
+                        sideEffects.isEmpty)
+                      sideEffects = value;
+                    if (category.toLowerCase().contains('image') &&
+                        imageUrl == null)
+                      imageUrl = value;
+                    if (category == 'CODES' && propName.isNotEmpty) {
+                      codes[propName] = value;
+                    }
+                  }
+                }
+              } catch (_) {}
+
               medicines.add(
                 Medicine(
-                  dosage: '',
-                  uses: '',
-                  sideEffects: '',
-                  id: prop['rxcui']?.toString() ?? '',
-                  name: prop['name']?.toString() ?? '',
-                  //   synonym: prop['synonym']?.toString(),
+                  id: rxcui,
+                  name: name,
+                  synonym: synonym,
+                  tty: tty,
+                  language: language,
+                  suppress: suppress,
+                  umlscui: umlscui,
+                  psn: psn,
+                  codes: codes.isNotEmpty ? codes : null,
+                  dosage: dosage,
+                  uses: uses,
+                  sideEffects: sideEffects,
+                  imageUrl: imageUrl,
                 ),
               );
             }

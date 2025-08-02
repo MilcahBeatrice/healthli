@@ -36,4 +36,23 @@ class EmergencyContact {
       isSynced: map['is_synced'],
     );
   }
+
+  Map<String, dynamic> toFirestore() => {
+    'id': id,
+    'user_id': userId,
+    'name': name,
+    'phone': phone,
+    'relationship': relationship,
+    'is_synced': isSynced == 1,
+  };
+
+  factory EmergencyContact.fromFirestore(Map<String, dynamic> map) =>
+      EmergencyContact(
+        id: map['id'],
+        userId: map['user_id'],
+        name: map['name'],
+        phone: map['phone'],
+        relationship: map['relationship'],
+        isSynced: map['is_synced'] == true || map['is_synced'] == 1 ? 1 : 0,
+      );
 }

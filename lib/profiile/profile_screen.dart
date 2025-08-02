@@ -61,7 +61,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       id: widget.userId,
       name: nameController.text,
       email: emailController.text,
-      age: null, // Add age parsing if you have an age field
+      age: int.tryParse(ageController.text) ?? 0,
       gender: genderController.text,
       profileImage:
           _profileImage?.path, // Save local path or upload and save URL
@@ -265,19 +265,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   _buildFormField('Name:', nameController),
                   SizedBox(height: 12),
-                  _buildFormField('Date of Birth:', dobController),
-                  SizedBox(height: 12),
+                  // _buildFormField('Date of Birth:', dobController),
+                  // SizedBox(height: 12),
                   _buildFormField('Email:', emailController),
                   SizedBox(height: 12),
-                  _buildFormField('Phone:', phoneController),
-                  SizedBox(height: 12),
+                  // _buildFormField('Phone:', phoneController),
+                  // SizedBox(height: 12),
                   _buildFormField('Gender:', genderController),
                   SizedBox(height: 12),
                   _buildFormField('Age:', ageController),
                   SizedBox(height: 12),
-                  _buildFormField('Height/cm:', heightController),
-                  SizedBox(height: 12),
-                  _buildFormField('Weight/Kg:', weightController),
+                  // _buildFormField('Height/cm:', heightController),
+                  // SizedBox(height: 12),
+                  // _buildFormField('Weight/Kg:', weightController),
                 ],
               ),
 

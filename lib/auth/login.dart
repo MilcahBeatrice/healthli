@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:healthli/auth/signup.dart';
 import 'package:healthli/services/auth_service.dart';
 import 'package:healthli/widgets/user_nav_gate.dart';
+import 'package:healthli/database/dao/dao_providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -23,12 +24,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
+      final userDao = ref.read(userDaoProvider);
       await ref
           .read(authServiceProvider)
           .signIn(
             _emailController.text.trim(),
             _passwordController.text.trim(),
+            userDao,
           );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const UserNavGate()),
+      );
+    } on Exception catch (e) {
+      setState(() {
+        _error = e.toString();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const UserNavGate()),
+        );
+      });
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await ref.read(authServiceProvider).signInWithGoogle();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const UserNavGate()),
@@ -119,6 +148,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 fontSize: 20,
                               ),
                             ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              InkWell(
+                onTap: _loading ? null : _loginWithGoogle,
+                child: Container(
+                  height: 56,
+                  width: MediaQuery.sizeOf(context).width,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/google_logo.png',
+                        height: 24,
+                        width: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Sign in with Google',
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

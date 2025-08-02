@@ -21,8 +21,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
 
   late final List<Widget> _pages = [
     HomeScreen(key: const PageStorageKey('home'), userId: widget.userId),
-    const CommunityScreen(key: PageStorageKey('community')),
-    const EmergencyScreen(key: PageStorageKey('emergency')),
+    CommunityTab(key: PageStorageKey('community'), userId: widget.userId),
+    EmergencyScreen(key: PageStorageKey('emergency'), userId: widget.userId),
     ProfileScreen(key: const PageStorageKey('profile'), userId: widget.userId),
   ];
 
